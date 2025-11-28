@@ -1,5 +1,7 @@
+import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Dumbbell,
   LayoutDashboard,
@@ -9,14 +11,29 @@ import {
   Bell,
   MessageCircle,
   MessageSquare,
-  Settings
+  Settings,
+  Shield
 } from "lucide-react";
+import { isAuthorizedAdmin } from "@/lib/auth/permissions";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Verificar autenticación en el servidor
+  const user = await currentUser();
+
+  if (!user) {
+    redirect('/sign-in');
+  }
+
+  // Verificar autorización
+  const userEmail = user.emailAddresses[0]?.emailAddress;
+  if (!isAuthorizedAdmin(userEmail)) {
+    redirect('/unauthorized');
+  }
+
   const navItems = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/tickets", icon: Ticket, label: "Tiqueteras" },
@@ -36,6 +53,14 @@ export default function DashboardLayout({
           <div className="flex items-center gap-2 mb-8">
             <Dumbbell className="w-8 h-8 text-red-500" />
             <h1 className="text-2xl font-bold text-white">GymSaaS</h1>
+          </div>
+
+          {/* Admin Badge */}
+          <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-red-500">
+              <Shield className="w-4 h-4" />
+              <span className="text-xs font-semibold">ADMINISTRADOR</span>
+            </div>
           </div>
 
           <nav className="space-y-2">
@@ -59,7 +84,7 @@ export default function DashboardLayout({
         <header className="bg-gray-900 border-b border-gray-800 px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-white">Bienvenido</h2>
+              <h2 className="text-xl font-semibold text-white">Bienvenido, Administrador</h2>
               <p className="text-sm text-gray-400">Gestiona tu gimnasio de forma eficiente</p>
             </div>
             <UserButton

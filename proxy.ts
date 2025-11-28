@@ -1,12 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { isProtectedRoute, isAuthorizedAdmin } from './lib/auth/permissions';
+import { isProtectedRoute, isSuperAdminRoute, getUserRole, canAccessRoute } from './lib/auth/permissions';
 
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/',
   '/unauthorized',
+  '/onboarding',
   '/api/webhooks(.*)'
 ]);
 
@@ -21,7 +22,7 @@ export default clerkMiddleware(async (auth, request) => {
   // Proteger con autenticación de Clerk
   await auth.protect();
 
-  // Verificar autorización para rutas protegidas de admin
+  // Verificar autorización para rutas protegidas
   if (isProtectedRoute(pathname)) {
     const { userId } = await auth();
 
@@ -36,10 +37,19 @@ export default clerkMiddleware(async (auth, request) => {
     const { sessionClaims } = await auth();
     const userEmail = sessionClaims?.email as string | undefined;
 
-    // Verificar si el usuario está autorizado como admin
-    if (!isAuthorizedAdmin(userEmail)) {
-      // Redirigir a página de no autorizado
-      return NextResponse.redirect(new URL('/unauthorized', request.url));
+    // Obtener rol del usuario
+    const userRole = getUserRole(userEmail);
+
+    // Verificar si el usuario puede acceder a esta ruta
+    if (!canAccessRoute(pathname, userRole)) {
+      // Redirigir según el caso
+      if (isSuperAdminRoute(pathname)) {
+        // Intentó acceder a ruta de super admin sin serlo
+        return NextResponse.redirect(new URL('/unauthorized', request.url));
+      } else {
+        // Intentó acceder a ruta para la que no tiene permisos
+        return NextResponse.redirect(new URL('/unauthorized', request.url));
+      }
     }
   }
 

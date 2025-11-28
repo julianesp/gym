@@ -12,9 +12,10 @@ import {
   MessageCircle,
   MessageSquare,
   Settings,
-  Shield
+  Shield,
+  Crown
 } from "lucide-react";
-import { isAuthorizedAdmin } from "@/lib/auth/permissions";
+import { getUserRole, UserRole, isSuperAdmin } from "@/lib/auth/permissions";
 
 export default async function DashboardLayout({
   children,
@@ -28,22 +29,51 @@ export default async function DashboardLayout({
     redirect('/sign-in');
   }
 
-  // Verificar autorización
+  // Obtener email y rol del usuario
   const userEmail = user.emailAddresses[0]?.emailAddress;
-  if (!isAuthorizedAdmin(userEmail)) {
+  const userRole = getUserRole(userEmail);
+
+  // Si el usuario no tiene rol válido, redirigir a onboarding
+  if (userRole === UserRole.UNAUTHORIZED) {
     redirect('/unauthorized');
   }
 
+  // Configurar navegación según el rol
   const navItems = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { href: "/tickets", icon: Ticket, label: "Tiqueteras" },
-    { href: "/members", icon: Users, label: "Miembros" },
-    { href: "/attendance", icon: ClipboardCheck, label: "Asistencias" },
-    { href: "/notifications", icon: Bell, label: "Notificaciones" },
-    { href: "/chat", icon: MessageCircle, label: "Chat" },
-    { href: "/feedback", icon: MessageSquare, label: "Feedback" },
-    { href: "/settings", icon: Settings, label: "Configuración" },
+    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
+    { href: "/tickets", icon: Ticket, label: "Tiqueteras", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
+    { href: "/members", icon: Users, label: "Miembros", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
+    { href: "/attendance", icon: ClipboardCheck, label: "Asistencias", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
+    { href: "/notifications", icon: Bell, label: "Notificaciones", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
+    { href: "/chat", icon: MessageCircle, label: "Chat", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF, UserRole.MEMBER] },
+    { href: "/feedback", icon: MessageSquare, label: "Feedback", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER] },
+    { href: "/settings", icon: Settings, label: "Configuración", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF, UserRole.MEMBER] },
   ];
+
+  // Filtrar items de navegación según el rol
+  const filteredNavItems = navItems.filter(item => item.roles.includes(userRole));
+
+  // Determinar badge y mensaje según el rol
+  const getRoleBadge = () => {
+    if (userRole === UserRole.SUPER_ADMIN) {
+      return {
+        icon: Crown,
+        label: "SUPER ADMIN",
+        color: "text-yellow-500",
+        bgColor: "bg-yellow-500/10",
+        borderColor: "border-yellow-500/30"
+      };
+    }
+    return {
+      icon: Shield,
+      label: "PROPIETARIO",
+      color: "text-red-500",
+      bgColor: "bg-red-500/10",
+      borderColor: "border-red-500/30"
+    };
+  };
+
+  const badge = getRoleBadge();
 
   return (
     <div className="min-h-screen bg-black">
@@ -55,16 +85,16 @@ export default async function DashboardLayout({
             <h1 className="text-2xl font-bold text-white">GymSaaS</h1>
           </div>
 
-          {/* Admin Badge */}
-          <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-red-500">
-              <Shield className="w-4 h-4" />
-              <span className="text-xs font-semibold">ADMINISTRADOR</span>
+          {/* Role Badge */}
+          <div className={`mb-6 ${badge.bgColor} border ${badge.borderColor} rounded-lg p-3`}>
+            <div className={`flex items-center gap-2 ${badge.color}`}>
+              <badge.icon className="w-4 h-4" />
+              <span className="text-xs font-semibold">{badge.label}</span>
             </div>
           </div>
 
           <nav className="space-y-2">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -74,6 +104,17 @@ export default async function DashboardLayout({
                 <span>{item.label}</span>
               </Link>
             ))}
+
+            {/* Super Admin Panel Link */}
+            {isSuperAdmin(userEmail) && (
+              <Link
+                href="/super-admin"
+                className="flex items-center gap-3 px-4 py-3 text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10 rounded-lg transition-colors border border-yellow-500/30 mt-4"
+              >
+                <Crown className="w-5 h-5" />
+                <span>Panel Super Admin</span>
+              </Link>
+            )}
           </nav>
         </div>
       </aside>
@@ -84,8 +125,14 @@ export default async function DashboardLayout({
         <header className="bg-gray-900 border-b border-gray-800 px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-white">Bienvenido, Administrador</h2>
-              <p className="text-sm text-gray-400">Gestiona tu gimnasio de forma eficiente</p>
+              <h2 className="text-xl font-semibold text-white">
+                Bienvenido{userRole === UserRole.SUPER_ADMIN ? ', Super Admin' : ''}
+              </h2>
+              <p className="text-sm text-gray-400">
+                {userRole === UserRole.SUPER_ADMIN
+                  ? 'Control total del sistema'
+                  : 'Gestiona tu gimnasio de forma eficiente'}
+              </p>
             </div>
             <UserButton
               appearance={{

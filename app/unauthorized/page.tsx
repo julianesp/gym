@@ -22,7 +22,7 @@ export default function UnauthorizedPage() {
           {/* Description */}
           <p className="text-gray-400 mb-8">
             Lo sentimos, no tienes permisos para acceder a esta área del sistema.
-            Esta plataforma está restringida solo para administradores autorizados.
+            Si eres dueño de un gimnasio, primero debes completar el registro de tu gimnasio.
           </p>
 
           {/* User Info */}

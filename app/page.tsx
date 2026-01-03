@@ -62,29 +62,52 @@ export default function Home() {
         </nav>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+          {/* Badge */}
+          <div className="inline-block mb-6">
+            <span className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded-full text-sm font-semibold">
+              🎉 Registra tu gimnasio GRATIS
+            </span>
+          </div>
+
           <h1 className="text-6xl font-bold text-white mb-6 leading-tight">
-            Gestiona tu Gimnasio
+            Administra tu Gimnasio
             <br />
-            <span className="text-red-500">de Forma Inteligente</span>
+            <span className="text-red-500">Como un Profesional</span>
           </h1>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            La plataforma completa para administrar miembros, tiqueteras, asistencias
-            y más. Todo en un solo lugar.
+          <p className="text-xl text-gray-300 mb-4 max-w-2xl mx-auto">
+            Lleva el control de tiqueteras, asistencias, pagos en efectivo y reportes financieros.
+            <br />
+            <span className="text-red-400 font-semibold">¡Todo lo que necesitas para gestionar tu gimnasio en una sola plataforma!</span>
           </p>
+
+          {/* Features List */}
+          <div className="flex flex-wrap gap-3 justify-center mb-8 max-w-3xl mx-auto">
+            {['✓ Registro de asistencias', '✓ Control de tiqueteras', '✓ Pagos en efectivo', '✓ Reportes diarios', '✓ Análisis mensual', '✓ Comparativas de ingresos'].map((item, i) => (
+              <span key={i} className="bg-gray-800/50 border border-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm">
+                {item}
+              </span>
+            ))}
+          </div>
+
           <div className="flex gap-4 justify-center">
             <Link
               href="/sign-up"
-              className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
+              className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors shadow-lg shadow-red-500/50 flex items-center gap-2"
             >
-              Prueba Gratuita 30 Días
+              🏋️ Registrar mi Gimnasio Gratis
             </Link>
             <Link
               href="/sign-in"
               className="bg-gray-800 hover:bg-gray-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors border border-gray-700"
             >
-              Ver Demo
+              Ya tengo cuenta
             </Link>
           </div>
+
+          {/* Trust indicators */}
+          <p className="text-sm text-gray-500 mt-6">
+            Sin compromiso • Configura tu gimnasio en 2 minutos • Soporte incluido
+          </p>
         </div>
       </section>
 

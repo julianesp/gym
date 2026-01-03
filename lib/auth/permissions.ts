@@ -64,6 +64,11 @@ export function isSuperAdminRoute(pathname: string): boolean {
 
 // Verificar si un usuario puede acceder a una ruta
 export function canAccessRoute(pathname: string, role: UserRole): boolean {
+  // Onboarding es accesible para todos los usuarios autenticados
+  if (pathname.startsWith('/onboarding')) {
+    return true;
+  }
+
   // Super admin puede acceder a todo
   if (role === UserRole.SUPER_ADMIN) {
     return true;

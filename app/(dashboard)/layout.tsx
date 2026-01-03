@@ -13,7 +13,8 @@ import {
   MessageSquare,
   Settings,
   Shield,
-  Crown
+  Crown,
+  DollarSign
 } from "lucide-react";
 import { getUserRole, UserRole, isSuperAdmin } from "@/lib/auth/permissions";
 
@@ -34,8 +35,10 @@ export default async function DashboardLayout({
   const userRole = getUserRole(userEmail);
 
   // Si el usuario no tiene rol válido, redirigir a onboarding
+  // NOTA: En producción, esto debería verificar si existe un gimnasio en la BD
+  // Por ahora, todos los usuarios nuevos son GYM_OWNER y deben completar onboarding
   if (userRole === UserRole.UNAUTHORIZED) {
-    redirect('/unauthorized');
+    redirect('/onboarding');
   }
 
   // Configurar navegación según el rol
@@ -44,6 +47,7 @@ export default async function DashboardLayout({
     { href: "/tickets", icon: Ticket, label: "Tiqueteras", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
     { href: "/members", icon: Users, label: "Miembros", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
     { href: "/attendance", icon: ClipboardCheck, label: "Asistencias", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
+    { href: "/revenue", icon: DollarSign, label: "Ingresos", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER] },
     { href: "/notifications", icon: Bell, label: "Notificaciones", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF] },
     { href: "/chat", icon: MessageCircle, label: "Chat", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER, UserRole.GYM_STAFF, UserRole.MEMBER] },
     { href: "/feedback", icon: MessageSquare, label: "Feedback", roles: [UserRole.SUPER_ADMIN, UserRole.GYM_OWNER] },

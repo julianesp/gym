@@ -6,15 +6,20 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-red-500 mb-2">GymSaaS</h1>
-          <p className="text-gray-400">Comienza a gestionar tu gimnasio hoy</p>
+          <p className="text-gray-400">Registra tu gimnasio y comienza gratis</p>
         </div>
         <SignUp
+          routing="path"
+          path="/sign-up"
           appearance={{
             elements: {
               rootBox: "mx-auto",
               card: "bg-gray-900 border border-gray-800",
             }
           }}
+          forceRedirectUrl="/onboarding"
+          fallbackRedirectUrl="/onboarding"
+          signInUrl="/sign-in"
         />
       </div>
     </div>

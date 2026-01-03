@@ -96,10 +96,45 @@ CREATE TABLE IF NOT EXISTS attendances (
     member_id UUID REFERENCES members(id) ON DELETE CASCADE,
     gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
     ticket_id UUID REFERENCES member_tickets(id) ON DELETE SET NULL,
+    payment_type VARCHAR(50) NOT NULL DEFAULT 'ticket', -- ticket, cash
+    cash_amount DECIMAL(10, 2), -- Monto si es pago en efectivo
     check_in_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     check_out_time TIMESTAMP WITH TIME ZONE,
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tabla de resumen de ingresos diarios
+CREATE TABLE IF NOT EXISTS daily_revenue (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    ticket_sales_count INTEGER DEFAULT 0,
+    ticket_sales_amount DECIMAL(10, 2) DEFAULT 0,
+    cash_payments_count INTEGER DEFAULT 0,
+    cash_payments_amount DECIMAL(10, 2) DEFAULT 0,
+    total_attendances INTEGER DEFAULT 0,
+    total_revenue DECIMAL(10, 2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(gym_id, date)
+);
+
+-- Tabla de resumen de ingresos mensuales
+CREATE TABLE IF NOT EXISTS monthly_revenue (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
+    year INTEGER NOT NULL,
+    month INTEGER NOT NULL,
+    ticket_sales_count INTEGER DEFAULT 0,
+    ticket_sales_amount DECIMAL(10, 2) DEFAULT 0,
+    cash_payments_count INTEGER DEFAULT 0,
+    cash_payments_amount DECIMAL(10, 2) DEFAULT 0,
+    total_attendances INTEGER DEFAULT 0,
+    total_revenue DECIMAL(10, 2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(gym_id, year, month)
 );
 
 -- Tabla de notificaciones
@@ -183,6 +218,9 @@ CREATE INDEX idx_member_tickets_expiration ON member_tickets(expiration_date);
 CREATE INDEX idx_attendances_member_id ON attendances(member_id);
 CREATE INDEX idx_attendances_gym_id ON attendances(gym_id);
 CREATE INDEX idx_attendances_check_in ON attendances(check_in_time);
+CREATE INDEX idx_attendances_payment_type ON attendances(payment_type);
+CREATE INDEX idx_daily_revenue_gym_date ON daily_revenue(gym_id, date DESC);
+CREATE INDEX idx_monthly_revenue_gym_period ON monthly_revenue(gym_id, year DESC, month DESC);
 CREATE INDEX idx_notifications_recipient ON notifications(recipient_id, is_read);
 CREATE INDEX idx_chat_messages_gym_id ON chat_messages(gym_id);
 CREATE INDEX idx_chat_messages_created ON chat_messages(created_at DESC);
@@ -195,6 +233,8 @@ ALTER TABLE members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ticket_packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE member_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_revenue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE monthly_revenue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE message_reactions ENABLE ROW LEVEL SECURITY;
@@ -224,6 +264,12 @@ CREATE TRIGGER update_member_tickets_updated_at BEFORE UPDATE ON member_tickets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_chat_messages_updated_at BEFORE UPDATE ON chat_messages
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_daily_revenue_updated_at BEFORE UPDATE ON daily_revenue
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_monthly_revenue_updated_at BEFORE UPDATE ON monthly_revenue
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Función para verificar sesiones expiradas y actualizar estado
@@ -269,3 +315,118 @@ BEGIN
     );
 END;
 $$ LANGUAGE plpgsql;
+
+-- Función para actualizar resumen de ingresos cuando se registra asistencia
+CREATE OR REPLACE FUNCTION update_revenue_on_attendance()
+RETURNS TRIGGER AS $$
+DECLARE
+    attendance_date DATE;
+    attendance_year INTEGER;
+    attendance_month INTEGER;
+BEGIN
+    attendance_date := DATE(NEW.check_in_time);
+    attendance_year := EXTRACT(YEAR FROM NEW.check_in_time);
+    attendance_month := EXTRACT(MONTH FROM NEW.check_in_time);
+
+    -- Actualizar resumen diario
+    INSERT INTO daily_revenue (gym_id, date, total_attendances, cash_payments_count, cash_payments_amount, total_revenue)
+    VALUES (
+        NEW.gym_id,
+        attendance_date,
+        1,
+        CASE WHEN NEW.payment_type = 'cash' THEN 1 ELSE 0 END,
+        COALESCE(NEW.cash_amount, 0),
+        COALESCE(NEW.cash_amount, 0)
+    )
+    ON CONFLICT (gym_id, date) DO UPDATE SET
+        total_attendances = daily_revenue.total_attendances + 1,
+        cash_payments_count = daily_revenue.cash_payments_count + CASE WHEN NEW.payment_type = 'cash' THEN 1 ELSE 0 END,
+        cash_payments_amount = daily_revenue.cash_payments_amount + COALESCE(NEW.cash_amount, 0),
+        total_revenue = daily_revenue.total_revenue + COALESCE(NEW.cash_amount, 0),
+        updated_at = NOW();
+
+    -- Actualizar resumen mensual
+    INSERT INTO monthly_revenue (gym_id, year, month, total_attendances, cash_payments_count, cash_payments_amount, total_revenue)
+    VALUES (
+        NEW.gym_id,
+        attendance_year,
+        attendance_month,
+        1,
+        CASE WHEN NEW.payment_type = 'cash' THEN 1 ELSE 0 END,
+        COALESCE(NEW.cash_amount, 0),
+        COALESCE(NEW.cash_amount, 0)
+    )
+    ON CONFLICT (gym_id, year, month) DO UPDATE SET
+        total_attendances = monthly_revenue.total_attendances + 1,
+        cash_payments_count = monthly_revenue.cash_payments_count + CASE WHEN NEW.payment_type = 'cash' THEN 1 ELSE 0 END,
+        cash_payments_amount = monthly_revenue.cash_payments_amount + COALESCE(NEW.cash_amount, 0),
+        total_revenue = monthly_revenue.total_revenue + COALESCE(NEW.cash_amount, 0),
+        updated_at = NOW();
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Función para actualizar resumen de ingresos cuando se vende tiquetera
+CREATE OR REPLACE FUNCTION update_revenue_on_ticket_sale()
+RETURNS TRIGGER AS $$
+DECLARE
+    sale_date DATE;
+    sale_year INTEGER;
+    sale_month INTEGER;
+BEGIN
+    -- Solo actualizar si es una nueva venta (INSERT) o cambio de estado a completed
+    IF (TG_OP = 'INSERT' AND NEW.payment_status = 'completed') OR
+       (TG_OP = 'UPDATE' AND OLD.payment_status != 'completed' AND NEW.payment_status = 'completed') THEN
+
+        sale_date := DATE(NEW.purchase_date);
+        sale_year := EXTRACT(YEAR FROM NEW.purchase_date);
+        sale_month := EXTRACT(MONTH FROM NEW.purchase_date);
+
+        -- Actualizar resumen diario
+        INSERT INTO daily_revenue (gym_id, date, ticket_sales_count, ticket_sales_amount, total_revenue)
+        VALUES (
+            NEW.gym_id,
+            sale_date,
+            1,
+            COALESCE(NEW.payment_amount, 0),
+            COALESCE(NEW.payment_amount, 0)
+        )
+        ON CONFLICT (gym_id, date) DO UPDATE SET
+            ticket_sales_count = daily_revenue.ticket_sales_count + 1,
+            ticket_sales_amount = daily_revenue.ticket_sales_amount + COALESCE(NEW.payment_amount, 0),
+            total_revenue = daily_revenue.total_revenue + COALESCE(NEW.payment_amount, 0),
+            updated_at = NOW();
+
+        -- Actualizar resumen mensual
+        INSERT INTO monthly_revenue (gym_id, year, month, ticket_sales_count, ticket_sales_amount, total_revenue)
+        VALUES (
+            NEW.gym_id,
+            sale_year,
+            sale_month,
+            1,
+            COALESCE(NEW.payment_amount, 0),
+            COALESCE(NEW.payment_amount, 0)
+        )
+        ON CONFLICT (gym_id, year, month) DO UPDATE SET
+            ticket_sales_count = monthly_revenue.ticket_sales_count + 1,
+            ticket_sales_amount = monthly_revenue.ticket_sales_amount + COALESCE(NEW.payment_amount, 0),
+            total_revenue = monthly_revenue.total_revenue + COALESCE(NEW.payment_amount, 0),
+            updated_at = NOW();
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger para actualizar ingresos en asistencias
+CREATE TRIGGER trigger_update_revenue_on_attendance
+    AFTER INSERT ON attendances
+    FOR EACH ROW
+    EXECUTE FUNCTION update_revenue_on_attendance();
+
+-- Trigger para actualizar ingresos en ventas de tiqueteras
+CREATE TRIGGER trigger_update_revenue_on_ticket_sale
+    AFTER INSERT OR UPDATE ON member_tickets
+    FOR EACH ROW
+    EXECUTE FUNCTION update_revenue_on_ticket_sale();

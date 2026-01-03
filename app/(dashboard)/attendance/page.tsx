@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, CheckCircle, XCircle, Search, Calendar } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Search, Calendar, Banknote, Ticket } from "lucide-react";
 
 interface Attendance {
   id: string;
   memberName: string;
   checkInTime: string;
   checkOutTime?: string;
-  ticketType: string;
-  sessionsRemaining: number;
+  paymentType: "ticket" | "cash";
+  ticketType?: string;
+  sessionsRemaining?: number;
+  cashAmount?: number;
 }
 
 export default function AttendancePage() {
@@ -19,6 +21,7 @@ export default function AttendancePage() {
       memberName: "Juan Pérez",
       checkInTime: "2024-11-28T08:30:00",
       checkOutTime: "2024-11-28T10:00:00",
+      paymentType: "ticket",
       ticketType: "Paquete Básico",
       sessionsRemaining: 25,
     },
@@ -26,13 +29,24 @@ export default function AttendancePage() {
       id: "2",
       memberName: "María González",
       checkInTime: "2024-11-28T09:15:00",
+      paymentType: "ticket",
       ticketType: "Paquete Premium",
       sessionsRemaining: 52,
+    },
+    {
+      id: "3",
+      memberName: "Carlos Ruiz",
+      checkInTime: "2024-11-28T10:45:00",
+      checkOutTime: "2024-11-28T12:15:00",
+      paymentType: "cash",
+      cashAmount: 150,
     },
   ]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [checkInCode, setCheckInCode] = useState("");
+  const [paymentType, setPaymentType] = useState<"ticket" | "cash">("ticket");
+  const [cashAmount, setCashAmount] = useState("");
 
   return (
     <div className="space-y-8">
@@ -52,6 +66,32 @@ export default function AttendancePage() {
           </div>
 
           <div className="space-y-4">
+            {/* Payment Type Selector */}
+            <div className="flex gap-2 bg-gray-900 border border-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setPaymentType("ticket")}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                  paymentType === "ticket"
+                    ? "bg-green-500 text-white"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                <Ticket className="w-4 h-4" />
+                Tiquetera
+              </button>
+              <button
+                onClick={() => setPaymentType("cash")}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+                  paymentType === "cash"
+                    ? "bg-green-500 text-white"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                <Banknote className="w-4 h-4" />
+                Efectivo
+              </button>
+            </div>
+
             <input
               type="text"
               placeholder="Escanea código QR o ingresa ID de miembro"
@@ -59,8 +99,22 @@ export default function AttendancePage() {
               onChange={(e) => setCheckInCode(e.target.value)}
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-green-500"
             />
+
+            {paymentType === "cash" && (
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Monto en efectivo</label>
+                <input
+                  type="number"
+                  placeholder="$150.00"
+                  value={cashAmount}
+                  onChange={(e) => setCashAmount(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-green-500"
+                />
+              </div>
+            )}
+
             <button className="w-full bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
-              Registrar Entrada
+              Registrar Entrada {paymentType === "cash" && "- Pago en Efectivo"}
             </button>
           </div>
         </div>
@@ -137,8 +191,8 @@ export default function AttendancePage() {
               <th className="text-left px-6 py-4 text-gray-400 font-medium">Miembro</th>
               <th className="text-left px-6 py-4 text-gray-400 font-medium">Entrada</th>
               <th className="text-left px-6 py-4 text-gray-400 font-medium">Salida</th>
-              <th className="text-left px-6 py-4 text-gray-400 font-medium">Tipo de Ticket</th>
-              <th className="text-left px-6 py-4 text-gray-400 font-medium">Sesiones Restantes</th>
+              <th className="text-left px-6 py-4 text-gray-400 font-medium">Tipo de Pago</th>
+              <th className="text-left px-6 py-4 text-gray-400 font-medium">Detalles</th>
               <th className="text-left px-6 py-4 text-gray-400 font-medium">Estado</th>
             </tr>
           </thead>
@@ -167,9 +221,32 @@ export default function AttendancePage() {
                       })
                     : '-'}
                 </td>
-                <td className="px-6 py-4 text-gray-300">{attendance.ticketType}</td>
                 <td className="px-6 py-4">
-                  <span className="text-white font-semibold">{attendance.sessionsRemaining}</span>
+                  {attendance.paymentType === "cash" ? (
+                    <span className="flex items-center gap-2 text-blue-400">
+                      <Banknote className="w-4 h-4" />
+                      Efectivo
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2 text-purple-400">
+                      <Ticket className="w-4 h-4" />
+                      Tiquetera
+                    </span>
+                  )}
+                </td>
+                <td className="px-6 py-4">
+                  {attendance.paymentType === "cash" ? (
+                    <span className="text-green-400 font-semibold">
+                      ${attendance.cashAmount?.toFixed(2)}
+                    </span>
+                  ) : (
+                    <div className="text-gray-300">
+                      <div className="text-sm">{attendance.ticketType}</div>
+                      <div className="text-xs text-gray-500">
+                        {attendance.sessionsRemaining} sesiones restantes
+                      </div>
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${

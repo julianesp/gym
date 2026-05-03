@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { auth } from "@clerk/nextjs/server";
 import { Users, Ticket, TrendingUp, DollarSign } from "lucide-react";
 

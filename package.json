@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "SUPPRESS_BASELINE_WARNINGS=true next build 2>&1 | grep -v 'baseline-browser-mapping'",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "pages:build": "npx @cloudflare/next-on-pages",
+    "pages:preview": "npm run pages:build && wrangler pages dev --compatibility-flag=nodejs_compat --env-file=.env.local",
+    "pages:deploy": "npm run pages:build && wrangler pages deploy",
+    "db:create": "wrangler d1 create gym-saas-db",
+    "db:migrate": "wrangler d1 execute gym-saas-db --file=d1-schema.sql",
+    "db:migrate:local": "wrangler d1 execute gym-saas-db --local --file=d1-schema.sql"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.39.3",
@@ -14,19 +20,22 @@
     "@supabase/supabase-js": "^2.86.0",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.555.0",
-    "next": "^16.2.4",
+    "next": "^15.5.2",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.16",
+    "@cloudflare/workers-types": "^4.20260503.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "baseline-browser-mapping": "^2.9.11",
     "eslint": "^9",
-    "eslint-config-next": "16.1.1",
+    "eslint-config-next": "^15.5.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.87.0"
   }
 }

@@ -21,34 +21,19 @@ export default clerkMiddleware(async (auth, request) => {
   // Proteger con autenticación de Clerk
   await auth.protect();
 
-  // Verificar autorización para rutas protegidas
-  if (isProtectedRoute(pathname)) {
-    const { userId } = await auth();
+  // Bloquear rutas de super admin para usuarios no autorizados
+  if (isSuperAdminRoute(pathname)) {
+    const { userId, sessionClaims } = await auth();
 
     if (!userId) {
-      // Si no hay usuario autenticado, redirigir a sign-in
-      const signInUrl = new URL('/sign-in', request.url);
-      signInUrl.searchParams.set('redirect_url', pathname);
-      return NextResponse.redirect(signInUrl);
+      return NextResponse.redirect(new URL('/sign-in', request.url));
     }
 
-    // Obtener información del usuario desde Clerk
-    const { sessionClaims } = await auth();
     const userEmail = sessionClaims?.email as string | undefined;
-
-    // Obtener rol del usuario
     const userRole = getUserRole(userEmail);
 
-    // Verificar si el usuario puede acceder a esta ruta
     if (!canAccessRoute(pathname, userRole)) {
-      // Redirigir según el caso
-      if (isSuperAdminRoute(pathname)) {
-        // Intentó acceder a ruta de super admin sin serlo
-        return NextResponse.redirect(new URL('/unauthorized', request.url));
-      } else {
-        // Intentó acceder a ruta para la que no tiene permisos
-        return NextResponse.redirect(new URL('/unauthorized', request.url));
-      }
+      return NextResponse.redirect(new URL('/unauthorized', request.url));
     }
   }
 

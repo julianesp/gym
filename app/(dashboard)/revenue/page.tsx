@@ -4,13 +4,17 @@ import { useState } from "react";
 import {
   DollarSign,
   TrendingUp,
-  TrendingDown,
   Calendar,
   Users,
   Ticket,
   Banknote,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  AlertCircle,
+  UserX,
+  Plus,
+  X,
+  Check
 } from "lucide-react";
 
 type DailyData = {
@@ -25,9 +29,53 @@ type MonthlyData = {
   attendances: number;
 };
 
+
+type SessionPayment = {
+  id: string;
+  name: string;
+  amount: number;
+  date: string;
+  time: string;
+  note: string;
+};
+
 export default function RevenuePage() {
   const [selectedPeriod, setSelectedPeriod] = useState<"daily" | "monthly">("daily");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Modal de registro de sesión suelta
+  const [showModal, setShowModal] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formAmount, setFormAmount] = useState("");
+  const [formNote, setFormNote] = useState("");
+  const [formSuccess, setFormSuccess] = useState(false);
+  const [sessionPayments, setSessionPayments] = useState<SessionPayment[]>([
+    { id: "1", name: "Carlos Méndez", amount: 300, date: "2024-11-28", time: "09:15", note: "" },
+    { id: "2", name: "Roberto Álvarez", amount: 300, date: "2024-11-27", time: "07:45", note: "Invitado de Juan" },
+    { id: "3", name: "Patricia Ruiz", amount: 300, date: "2024-11-25", time: "08:20", note: "" },
+  ]);
+
+  const handleRegisterSession = () => {
+    if (!formName.trim() || !formAmount) return;
+    const now = new Date();
+    const newEntry: SessionPayment = {
+      id: Date.now().toString(),
+      name: formName.trim(),
+      amount: parseFloat(formAmount),
+      date: now.toISOString().split('T')[0],
+      time: now.toTimeString().slice(0, 5),
+      note: formNote.trim(),
+    };
+    setSessionPayments(prev => [newEntry, ...prev]);
+    setFormSuccess(true);
+    setTimeout(() => {
+      setFormSuccess(false);
+      setShowModal(false);
+      setFormName("");
+      setFormAmount("");
+      setFormNote("");
+    }, 1500);
+  };
 
   // En producción, estos datos vendrían de Supabase
   const dailyStats = {
@@ -68,6 +116,7 @@ export default function RevenuePage() {
     { date: "2024-11-27", revenue: 3900, attendances: 43 },
     { date: "2024-11-28", revenue: 4500, attendances: 45 },
   ];
+
 
   const last6Months: MonthlyData[] = [
     { month: "Jun", revenue: 65000, attendances: 980 },
@@ -325,6 +374,158 @@ export default function RevenuePage() {
           </div>
         </div>
       </div>
+
+      {/* Session Payments */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-500/10 p-2 rounded-lg">
+              <Banknote className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white">Pagos por Sesión Suelta</h3>
+              <p className="text-sm text-gray-400">
+                Personas sin tiquetera ni plan que pagan por sesión
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Registrar Pago
+          </button>
+        </div>
+
+        {sessionPayments.length === 0 ? (
+          <div className="text-center py-10 text-gray-500">
+            <UserX className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p>No hay pagos por sesión registrados</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-800">
+                  <th className="text-left text-gray-400 text-sm font-medium pb-3">Nombre</th>
+                  <th className="text-left text-gray-400 text-sm font-medium pb-3">Fecha</th>
+                  <th className="text-left text-gray-400 text-sm font-medium pb-3">Hora</th>
+                  <th className="text-left text-gray-400 text-sm font-medium pb-3">Nota</th>
+                  <th className="text-right text-gray-400 text-sm font-medium pb-3">Monto</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {sessionPayments.map((entry) => (
+                  <tr key={entry.id} className="hover:bg-gray-800/40 transition-colors">
+                    <td className="py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                          {entry.name.charAt(0)}
+                        </div>
+                        <span className="text-white font-medium">{entry.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 text-gray-400 text-sm">{entry.date}</td>
+                    <td className="py-3 text-gray-400 text-sm">{entry.time}</td>
+                    <td className="py-3 text-gray-500 text-sm">{entry.note || "—"}</td>
+                    <td className="py-3 text-right text-white font-semibold">
+                      {formatCurrency(entry.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-gray-700">
+                  <td colSpan={4} className="pt-4 text-gray-400 text-sm">
+                    Total recaudado por sesiones sueltas
+                  </td>
+                  <td className="pt-4 text-right text-white font-bold">
+                    {formatCurrency(sessionPayments.reduce((sum, e) => sum + e.amount, 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modal Registrar Pago */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-white">Registrar Sesión Suelta</h2>
+              <button
+                onClick={() => { setShowModal(false); setFormName(""); setFormAmount(""); setFormNote(""); }}
+                className="text-gray-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {formSuccess ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <div className="bg-green-500/10 border border-green-500/30 rounded-full p-4">
+                  <Check className="w-8 h-8 text-green-500" />
+                </div>
+                <p className="text-white font-medium">Pago registrado correctamente</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Nombre de la persona *</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Carlos Méndez"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Monto cobrado *</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                    <input
+                      type="number"
+                      placeholder="300"
+                      value={formAmount}
+                      onChange={(e) => setFormAmount(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Nota <span className="text-gray-600">(opcional)</span></label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Invitado de Juan Pérez"
+                    value={formNote}
+                    onChange={(e) => setFormNote(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => { setShowModal(false); setFormName(""); setFormAmount(""); setFormNote(""); }}
+                    className="flex-1 bg-gray-800 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleRegisterSession}
+                    disabled={!formName.trim() || !formAmount}
+                    className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-medium transition-colors"
+                  >
+                    Registrar Pago
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Revenue Breakdown */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">

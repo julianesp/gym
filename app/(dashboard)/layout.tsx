@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getRequestContext } from "@cloudflare/next-on-pages";
 import {
   Dumbbell,
   LayoutDashboard,
@@ -14,9 +15,13 @@ import {
   Settings,
   Shield,
   Crown,
-  DollarSign
+  DollarSign,
+  AlertTriangle,
+  CreditCard,
 } from "lucide-react";
 import { getUserRole, UserRole, isSuperAdmin } from "@/lib/auth/permissions";
+
+export const runtime = "edge";
 
 export default async function DashboardLayout({
   children,
@@ -34,11 +39,48 @@ export default async function DashboardLayout({
   const userEmail = user.emailAddresses[0]?.emailAddress;
   const userRole = getUserRole(userEmail);
 
-  // Si el usuario no tiene rol válido, redirigir a onboarding
-  // NOTA: En producción, esto debería verificar si existe un gimnasio en la BD
-  // Por ahora, todos los usuarios nuevos son GYM_OWNER y deben completar onboarding
   if (userRole === UserRole.UNAUTHORIZED) {
     redirect('/onboarding');
+  }
+
+  // Estado de suscripción del gym (trial + pagos). Si el dueño ya pagó,
+  // `subscribed` es true y no mostramos avisos de vencimiento del trial.
+  let trialDaysLeft: number | null = null;
+  let trialExpired = false;
+  let subscribed = false;
+  try {
+    const { env } = getRequestContext();
+    const db: D1Database = (env as unknown as { DB: D1Database }).DB;
+    const gym = await db
+      .prepare(`SELECT id, trial_ends_at FROM gyms WHERE owner_id = ? LIMIT 1`)
+      .bind(user.id)
+      .first<{ id: string; trial_ends_at: string | null }>();
+
+    if (gym) {
+      const now = Date.now();
+
+      const sub = await db
+        .prepare(
+          `SELECT expires_at FROM gym_subscriptions
+           WHERE gym_id = ? AND status = 'active'
+           ORDER BY started_at DESC LIMIT 1`
+        )
+        .bind(gym.id)
+        .first<{ expires_at: string | null }>();
+
+      subscribed =
+        !!sub && (!sub.expires_at || new Date(sub.expires_at).getTime() > now);
+
+      if (!subscribed && gym.trial_ends_at) {
+        const diff = Math.ceil(
+          (new Date(gym.trial_ends_at).getTime() - now) / (1000 * 60 * 60 * 24)
+        );
+        trialDaysLeft = diff;
+        trialExpired = diff < 0;
+      }
+    }
+  } catch {
+    // En local sin binding D1 no mostramos el banner
   }
 
   // Configurar navegación según el rol
@@ -79,6 +121,39 @@ export default async function DashboardLayout({
 
   const badge = getRoleBadge();
 
+  // Gate de suscripción: si el trial venció y no hay pago activo, bloqueamos el
+  // acceso a las herramientas del gym (super admin queda exento).
+  const accessBlocked =
+    userRole === UserRole.GYM_OWNER && trialExpired && !subscribed;
+
+  if (accessBlocked) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-gray-900 border border-red-500/30 rounded-2xl p-8 text-center">
+          <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Tu prueba ha vencido</h1>
+          <p className="text-gray-400 mb-6">
+            Para seguir gestionando tu gimnasio necesitas activar tu suscripción
+            de GymSaaS. Tus datos siguen guardados y volverán a estar disponibles
+            apenas actives tu plan.
+          </p>
+          <Link
+            href="/suscripcion"
+            className="inline-flex items-center justify-center gap-2 w-full bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+          >
+            <CreditCard className="w-5 h-5" />
+            Activar suscripción
+          </Link>
+          <div className="mt-6">
+            <UserButton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black">
       {/* Sidebar */}
@@ -108,6 +183,28 @@ export default async function DashboardLayout({
                 <span>{item.label}</span>
               </Link>
             ))}
+
+            {/* Suscripción */}
+            {userRole === UserRole.GYM_OWNER && (
+              <Link
+                href="/suscripcion"
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors border mt-4 ${
+                  trialExpired
+                    ? "text-red-400 hover:text-red-300 bg-red-500/10 border-red-500/40 hover:bg-red-500/20"
+                    : "text-yellow-400 hover:text-yellow-300 bg-yellow-500/10 border-yellow-500/30 hover:bg-yellow-500/20"
+                }`}
+              >
+                <CreditCard className="w-5 h-5" />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-sm font-medium">Suscripción</span>
+                  {trialDaysLeft !== null && (
+                    <span className="text-xs opacity-75">
+                      {trialExpired ? "Vencida" : `${trialDaysLeft}d restantes`}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            )}
 
             {/* Super Admin Panel Link */}
             {isSuperAdmin(userEmail) && (
@@ -147,6 +244,32 @@ export default async function DashboardLayout({
             />
           </div>
         </header>
+
+        {/* Banner de trial */}
+        {trialDaysLeft !== null && trialDaysLeft <= 7 && (
+          <div className={`px-8 py-3 flex items-center justify-between gap-4 ${
+            trialExpired
+              ? "bg-red-900/60 border-b border-red-700"
+              : trialDaysLeft <= 2
+              ? "bg-orange-900/50 border-b border-orange-700"
+              : "bg-yellow-900/40 border-b border-yellow-700"
+          }`}>
+            <div className="flex items-center gap-2 text-sm">
+              <AlertTriangle className={`w-4 h-4 flex-shrink-0 ${trialExpired ? "text-red-400" : "text-yellow-400"}`} />
+              <span className={trialExpired ? "text-red-300" : "text-yellow-200"}>
+                {trialExpired
+                  ? "Tu período de prueba ha vencido. Activa tu suscripción para continuar usando GymSaaS."
+                  : `Tu prueba gratuita vence en ${trialDaysLeft} día${trialDaysLeft !== 1 ? "s" : ""}. ¡Activa tu plan para no perder el acceso!`}
+              </span>
+            </div>
+            <Link
+              href="/suscripcion"
+              className="flex-shrink-0 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors"
+            >
+              Activar plan
+            </Link>
+          </div>
+        )}
 
         {/* Page Content */}
         <main className="p-8">

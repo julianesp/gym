@@ -9,7 +9,7 @@ const eslintConfig = defineConfig([
       ...nextPlugin.configs["core-web-vitals"].rules,
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", "out/**", "build/**", ".vercel/**", ".wrangler/**", "next-env.d.ts"]),
 ]);
 
 export default eslintConfig;

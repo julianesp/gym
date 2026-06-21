@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Dumbbell, CheckCircle, Users, TrendingUp, Zap } from "lucide-react";
+import GymCarousel from "@/components/home/GymCarousel";
 
 export default function Home() {
   const features = [
@@ -65,7 +66,7 @@ export default function Home() {
           {/* Badge */}
           <div className="inline-block mb-6">
             <span className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-2 rounded-full text-sm font-semibold">
-              🎉 Registra tu gimnasio GRATIS
+              7 días gratis — sin tarjeta de crédito
             </span>
           </div>
 
@@ -89,12 +90,12 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center flex-wrap">
             <Link
               href="/sign-up"
               className="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors shadow-lg shadow-red-500/50 flex items-center gap-2"
             >
-              🏋️ Registrar mi Gimnasio Gratis
+              Empezar 7 días gratis
             </Link>
             <Link
               href="/sign-in"
@@ -106,7 +107,7 @@ export default function Home() {
 
           {/* Trust indicators */}
           <p className="text-sm text-gray-500 mt-6">
-            Sin compromiso • Configura tu gimnasio en 2 minutos • Soporte incluido
+            7 días gratis • Luego solo $39.900/mes • Sin permanencia • Cancela cuando quieras
           </p>
         </div>
       </section>
@@ -140,20 +141,26 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Gym Carousel */}
+      <GymCarousel />
+
       {/* CTA Section */}
       <section className="py-24 bg-gradient-to-br from-red-500/10 to-orange-500/10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-4">
             ¿Listo para transformar tu gimnasio?
           </h2>
-          <p className="text-xl text-gray-300 mb-8">
-            Únete a cientos de gimnasios que ya confían en GymSaaS
+          <p className="text-xl text-gray-300 mb-2">
+            Únete a los gimnasios que ya confían en GymSaaS
+          </p>
+          <p className="text-gray-500 mb-8">
+            7 días gratis — después $39.900/mes. Sin permanencia.
           </p>
           <Link
             href="/sign-up"
             className="inline-block bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
           >
-            Comenzar Ahora
+            Empezar 7 días gratis
           </Link>
         </div>
       </section>

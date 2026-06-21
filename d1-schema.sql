@@ -9,7 +9,10 @@ CREATE TABLE IF NOT EXISTS gyms (
     address TEXT,
     phone TEXT,
     email TEXT,
+    city TEXT,
     logo_url TEXT,
+    status TEXT NOT NULL DEFAULT 'active', -- 'active' | 'suspended'
+    trial_ends_at TEXT DEFAULT (datetime('now', '+7 days')),
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -188,6 +191,18 @@ CREATE TABLE IF NOT EXISTS gym_suggestions (
     is_anonymous INTEGER DEFAULT 0,
     is_read INTEGER DEFAULT 0,
     status TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Configuración de pagos por gimnasio (ePayco + Nequi del dueño)
+CREATE TABLE IF NOT EXISTS gym_payment_config (
+    gym_id TEXT PRIMARY KEY REFERENCES gyms(id) ON DELETE CASCADE,
+    epayco_public_key TEXT,
+    epayco_private_key TEXT,
+    nequi_number TEXT,
+    accepts_epayco INTEGER DEFAULT 0,
+    accepts_nequi INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );

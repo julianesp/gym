@@ -1,5 +1,5 @@
 // Super Admin - Acceso total al sistema y todos los gimnasios
-export const SUPER_ADMIN_EMAIL = 'julii1295@gmail.com';
+export const SUPER_ADMIN_EMAIL = 'admin@neurai.dev';
 
 // Roles del sistema
 export enum UserRole {

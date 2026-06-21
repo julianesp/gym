@@ -14,7 +14,7 @@
     "db:create": "wrangler d1 create gym-saas-db",
     "db:migrate": "wrangler d1 execute gym-saas-db --file=d1-schema.sql",
     "db:migrate:local": "wrangler d1 execute gym-saas-db --local --file=d1-schema.sql",
-    "db:migrate:status": "wrangler d1 execute gym-saas-db --file=migrations/001_gym_status.sql",
+    "db:migrate:status": "wrangler d1 execute gym-saas-db --remote --file=migrations/001_gym_status.sql",
     "db:migrate:status:local": "wrangler d1 execute gym-saas-db --local --file=migrations/001_gym_status.sql"
   },
   "dependencies": {

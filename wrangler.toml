@@ -3,6 +3,15 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
 
+# Variables públicas (no secretas). El CLERK_SECRET_KEY y las llaves privadas
+# de ePayco se configuran como secrets:  wrangler pages secret put <NOMBRE>
+[vars]
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_YnVyc3RpbmctamF2ZWxpbi0zMi5jbGVyay5hY2NvdW50cy5kZXYk"
+NEXT_PUBLIC_CLERK_SIGN_IN_URL = "/sign-in"
+NEXT_PUBLIC_CLERK_SIGN_UP_URL = "/sign-up"
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL = "/dashboard"
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL = "/onboarding"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "gym-saas-db"

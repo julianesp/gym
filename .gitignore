@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# cloudflare wrangler — estado local de Miniflare/D1, no versionar
+.wrangler
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

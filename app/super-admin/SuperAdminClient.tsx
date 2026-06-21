@@ -15,6 +15,7 @@ import {
   Trash2,
   Search,
 } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 import GymDetailDrawer from "./GymDetailDrawer";
 
 type GymState = "subscribed" | "trial" | "expired";
@@ -208,14 +209,17 @@ export default function SuperAdminClient() {
     <div className="min-h-screen bg-black p-8">
       <div className="space-y-8 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-yellow-500/10 p-3 rounded-lg">
-            <Crown className="w-8 h-8 text-yellow-500" />
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-yellow-500/10 p-3 rounded-lg">
+              <Crown className="w-8 h-8 text-yellow-500" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white">Panel de Super Admin</h1>
+              <p className="text-gray-400">Vista completa del sistema GymSaaS</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white">Panel de Super Admin</h1>
-            <p className="text-gray-400">Vista completa del sistema GymSaaS</p>
-          </div>
+          <UserButton afterSignOutUrl="/sign-in" />
         </div>
 
         {error && (
